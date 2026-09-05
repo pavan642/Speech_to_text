@@ -38,21 +38,42 @@ The application is a desktop GUI utility built in Python using **PyQt5**. It cap
 * **`SpeechToTextGrammarApp`:** Defines the main PyQt5 window, custom window icon fetching, dual-panel display layout, microphone state handlers, and clipboard action buttons.
 * **`ProcessingWorker`:** A `QObject` worker executed via `threading.Thread` that coordinates non-blocking execution between audio input and `SpeechModels`.
 
---------------------------------------------------------------------------------------
 
-App Execution  logs
+------------------------------------
 
-python3 main.py 
-/Users/pavanpersonal/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
-  warnings.warn(
-2026-09-05 07:15:05,023 [WARNING] Failed to load window icon from URL: HTTP Error 403: Forbidden
-2026-09-05 07:15:05,023 [INFO] Loading Whisper model...
-2026-09-05 07:15:05,567 [INFO] Whisper model loaded successfully.
-2026-09-05 07:15:20,102 [INFO] Transcribing audio with Whisper...
-2026-09-05 07:15:20,103 [INFO] Processing audio with duration 00:06.648
-/Users/pavanpersonal/Library/Python/3.9/lib/python/site-packages/faster_whisper/feature_extractor.py:224: RuntimeWarning: divide by zero encountered in matmul
+Libraries to install before the application using requirements.txt
+
+pip install -r requirements.txt
+
+or direct command
+
+pip3  install PyQt5 faster-whisper sounddevice numpy transformers torch sentencepiece
+
+
+Additional System Dependencies
+macOS: You may need to grant Microphone permissions to your terminal or IDE (e.g., VS Code or iTerm) under System Settings > Privacy & Security > Microphone.
+
+Linux (Ubuntu/Debian): If sounddevice or PyQt5 throws binding errors, install PortAudio and Qt5 dependencies via apt:
+
+Bash
+sudo apt-get update
+sudo apt-get install -y python3-pyqt5 portaudio19-dev
+
+
+To execution the application 
+
+python3 main.py
+
+2026-09-05 07:08:13,031 [WARNING] Failed to load window icon from URL: HTTP Error 403: Forbidden
+2026-09-05 07:08:13,031 [INFO] Loading Whisper model...
+2026-09-05 07:08:13,560 [INFO] Whisper model loaded successfully.
+2026-09-05 07:08:21,842 [INFO] Transcribing audio with Whisper...
+2026-09-05 07:08:21,842 [INFO] Processing audio with duration 00:05.462
+/Users/pavankumar/Library/Python/3.9/lib/python/site-packages/faster_whisper/feature_extractor.py:224: RuntimeWarning: divide by zero encountered in matmul
   mel_spec = self.mel_filters @ magnitudes
-/Users/pavanpersonal/Library/Python/3.9/lib/python/site-packages/faster_whisper/feature_extractor.py:224: RuntimeWarning: overflow encountered in matmul
+/Users/pavankumar/Library/Python/3.9/lib/python/site-packages/faster_whisper/feature_extractor.py:224: RuntimeWarning: overflow encountered in matmul
   mel_spec = self.mel_filters @ magnitudes
-/Users/pavanpersonal/Library/Python/3.9/lib/python/site-packages/faster_whisper/feature_extractor.py:224: RuntimeWarning: invalid value encountered in matmul
+/Users/pavankumar/Library/Python/3.9/lib/python/site-packages/faster_whisper/feature_extractor.py:224: RuntimeWarning: invalid value encountered in matmul
   mel_spec = self.mel_filters @ magnitudes
+
+
