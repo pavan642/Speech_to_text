@@ -1,5 +1,6 @@
 Here is a complete technical summary of the modularized **Speech-to-Text Desktop Application**:
 
+
 ---
 
 ### **Overview**
@@ -59,6 +60,9 @@ Bash
 sudo apt-get update
 sudo apt-get install -y python3-pyqt5 portaudio19-dev
 
+how to run
+
+python main.py
 
 To execution the application 
 
@@ -77,3 +81,4 @@ python3 main.py
   mel_spec = self.mel_filters @ magnitudes
 
 
+---
