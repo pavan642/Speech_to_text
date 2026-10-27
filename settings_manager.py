@@ -11,6 +11,11 @@ logger = logging.getLogger("SpeechGrammarApp")
 DEFAULT_SETTINGS = {
     "theme": "light",
     "openai_api_key": "",
+    "whisper_model": "base",
+    "openai_prompt": "",  # empty = use built-in default from config.py
+    "save_history": True,
+    "noise_reduction": True,
+    "live_transcription": True,
 }
 
 

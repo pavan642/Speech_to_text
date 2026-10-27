@@ -1,4 +1,9 @@
 {
   "theme": "dark",
-  "openai_api_key": ""
+  "openai_api_key": "",
+  "whisper_model": "base",
+  "openai_prompt": "You are a text optimization assistant. Rewrite the user's speech transcription: correct all grammatical errors, improve clarity and flow, and format the result as clear bullet points while strictly preserving the original meaning. Return only the bullet-point text, with no commentary or preamble.",
+  "save_history": true,
+  "noise_reduction": true,
+  "live_transcription": true
 }
