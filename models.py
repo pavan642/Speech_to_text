@@ -1,8 +1,6 @@
 # models.py
 import logging
-import re
 from faster_whisper import WhisperModel
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import config
 
 logger = logging.getLogger("SpeechGrammarApp")
@@ -12,8 +10,8 @@ class SpeechModels:
 
     def __init__(self):
         self.whisper_model = None
-        self.t5_model = None
-        self.t5_tokenizer = None
+        self._openai_client = None
+        self._openai_key = None
 
     def load_whisper(self):
         """Loads the Whisper model for speech transcription."""
@@ -25,14 +23,6 @@ class SpeechModels:
                 compute_type=config.WHISPER_COMPUTE_TYPE,
             )
             logger.info("Whisper model loaded successfully.")
-
-    def load_t5(self):
-        """Loads the Grammarly CoEdIT T5 model on demand."""
-        if self.t5_model is None or self.t5_tokenizer is None:
-            logger.info(f"Loading T5 Grammar Model ({config.T5_MODEL_NAME})...")
-            self.t5_tokenizer = AutoTokenizer.from_pretrained(config.T5_MODEL_NAME)
-            self.t5_model = AutoModelForSeq2SeqLM.from_pretrained(config.T5_MODEL_NAME)
-            logger.info("T5 Grammar Model loaded successfully.")
 
     def transcribe_audio(self, audio_data) -> str:
         """Transcribes raw audio float array using Whisper."""
@@ -47,45 +37,30 @@ class SpeechModels:
         )
         return " ".join([s.text.strip() for s in segments if s.text.strip()])
 
-    def correct_grammar(self, text: str) -> str:
-        """Fixes grammatical errors using the T5 CoEdIT model."""
-        if not text:
+    def optimize_text(self, text: str, api_key: str) -> str:
+        """Optimizes the transcribed text using the OpenAI API.
+
+        The openai package is imported lazily here so the app can always
+        transcribe speech even when openai (or its dependencies) is not
+        installed or fails to load.
+        """
+        if not text or not api_key:
             return ""
 
-        self.load_t5()
-        logger.info("Applying grammar correction...")
-        chunks = self._split_into_sentences(text)
-        corrected_chunks = []
+        from openai import OpenAI  # lazy import — only needed for optimization
 
-        for chunk in chunks:
-            prompt = config.T5_PROMPT_PREFIX + chunk
-            inputs = self.t5_tokenizer(
-                prompt, return_tensors="pt", max_length=256, truncation=True
-            )
-            outputs = self.t5_model.generate(
-                **inputs, max_length=256, num_beams=2, early_stopping=True
-            )
-            corrected_chunk = self.t5_tokenizer.decode(
-                outputs[0], skip_special_tokens=True
-            )
-            corrected_chunks.append(corrected_chunk)
+        # Recreate the client only when the key changes
+        if self._openai_client is None or self._openai_key != api_key:
+            self._openai_client = OpenAI(api_key=api_key)
+            self._openai_key = api_key
 
-        return " ".join(corrected_chunks)
-
-    def _split_into_sentences(self, text: str):
-        """Splits transcript into logical sentence chunks for T5 processing."""
-        sentences = re.split(r"(?<=[.!?])\s+", text)
-        chunks = []
-        current_chunk = ""
-
-        for sentence in sentences:
-            if len(current_chunk) + len(sentence) < 150:
-                current_chunk += sentence + " "
-            else:
-                chunks.append(current_chunk.strip())
-                current_chunk = sentence + " "
-
-        if current_chunk:
-            chunks.append(current_chunk.strip())
-
-        return chunks
+        logger.info(f"Optimizing text with OpenAI ({config.OPENAI_MODEL})...")
+        response = self._openai_client.chat.completions.create(
+            model=config.OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": config.OPENAI_SYSTEM_PROMPT},
+                {"role": "user", "content": text},
+            ],
+            temperature=0.3,
+        )
+        return response.choices[0].message.content.strip()

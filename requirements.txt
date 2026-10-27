@@ -1,8 +1,5 @@
-Plaintext
 PyQt5>=5.15.0
 faster-whisper>=1.0.0
 sounddevice>=0.4.6
 numpy>=1.21.0
-transformers>=4.30.0
-torch>=2.0.0
-sentencepiece>=0.1.99
+openai>=1.0.0
