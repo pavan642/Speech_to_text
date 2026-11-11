@@ -1,21 +1,25 @@
 # settings_manager.py
-"""Loads and saves user preferences (theme + OpenAI API key) to a local JSON file."""
+"""Loads and saves user preferences to a local JSON file."""
 import json
 import logging
 import os
 
 import config
 
-logger = logging.getLogger("SpeechGrammarApp")
+logger = logging.getLogger("SpeechEditor")
 
 DEFAULT_SETTINGS = {
     "theme": "light",
-    "openai_api_key": "",
-    "whisper_model": "base",
-    "openai_prompt": "",  # empty = use built-in default from config.py
-    "save_history": True,
-    "noise_reduction": True,
+    "claude_api_key": "",
+    "claude_model": config.CLAUDE_MODEL,
+    "whisper_model": config.WHISPER_MODEL_NAME,
     "live_transcription": True,
+    "noise_reduction": True,
+    "documents_folder": config.DEFAULT_DOCUMENTS_FOLDER,
+    "doc_extension": ".md",
+    "save_history": True,
+    "git_remote_url": "",
+    "git_branch": "main",
 }
 
 

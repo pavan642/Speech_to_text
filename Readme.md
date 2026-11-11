@@ -1,137 +1,132 @@
-# 🎙️ Speech to Text — Live Whisper Transcription + OpenAI Optimization
+# 🎙️ TextIQ — dictate, write, and optimize documents with Claude
 
-A desktop app (Python + PyQt5) that captures microphone audio and transcribes it **live** using a local quantized Whisper model — with noise reduction, voice-activity detection, and optional one-shot text optimization via your own OpenAI API key. Runs fully offline for transcription; OpenAI is used only for post-processing.
+A **VS Code-style desktop editor** (Python + PyQt5) where your **voice becomes text at the cursor** — with a real document workflow: folder-tree file manager with tabs, split view, full rich-text formatting, autosave, content search, text-to-speech, per-file reminders, **Claude (Anthropic) text optimization**, and git push. Transcription runs **fully offline** (local Whisper); Claude is used only for optional text optimization.
 
 ---
 
-## ✨ Features
+## ✨ Feature tour
 
+### 🎙️ Speech
 | Feature | Details |
 |---|---|
-| **Live streaming transcription** | Text appears every ~4s while you speak — no waiting for Mic OFF. Overlapping chunks (0.7s) prevent clipped words at boundaries. |
-| **Noise reduction** | High-pass filter (cuts rumble/hum < 85 Hz) + spectral gating (`noisereduce`) for fans/AC. Toggleable. |
-| **Voice Activity Detection** | Built-in Silero VAD skips silence — fewer hallucinations, faster processing. |
-| **OpenAI optimization** | Sends the finished transcript to `gpt-4o-mini` with your editable system prompt (bullet points, summary, formal email…). |
-| **Whisper model picker** | `tiny` / `base` / `small` / `medium` — trade speed for accuracy, reloads in background. |
-| **Light & dark themes** | Modern card UI with shadows, gradients, slim scrollbars. Instant switch. |
-| **Recording timer** | Elapsed `MM:SS` shown next to the speaking indicator while the mic is on. |
-| **Mic level indicator** | Draggable ~2 cm circle that fills green with your live voice level. |
-| **Session history** | Every session saved to `history/*.md`; sidebar lists past sessions — click to reload into the panels. |
-| **Graceful degradation** | No API key? Transcription still works. OpenAI call fails? Raw text preserved + error popup. Broken `openai` install? App still starts. |
-| **Smoke test** | `test_pipeline.py` verifies the whole environment in seconds. |
+| **Dictate at cursor** | Click **Start** in the SPEECH panel, speak — text streams into the editor at your cursor, live (~4s chunks with 0.7s overlap, no clipped words) |
+| **Live STT mirror** | The same text appears in the panel's *Speech → Text* view |
+| **Voice commands** | "new line", "comma", "period", "question mark"… become real punctuation; say **"scratch that"** to undo the last dictated chunk |
+| **Noise reduction + VAD** | High-pass filter + spectral gating (`noisereduce`) + Silero VAD |
+| **Recording timer + level ring** | Elapsed `MM:SS` and a draggable mic-level indicator |
+| **Speech history** | Every dictation session is archived (left panel), opens as a read-only tab |
+
+### 📝 Editor
+- **Tabs**: open many documents, per-tab **✕** close, dirty `●` indicator, **✓ flash** on save, drag to reorder
+- **Split view**: two full editors side by side (⫿ button / Ctrl+Shift+S), second pane has its own **Close** button
+- **Formatting (2-row toolbar)**: undo/redo, **B**/*I*/U/S, H1–H3, font size, text & highlight color, bullet/numbered lists, **☐ task checkboxes**, alignment, code style, tables, clear formatting
+- **Markdown-style auto-format**: type `# `, `- `, `[] ` → heading / list / task
+- **Autosave** (2.5s debounce), **word & character count** in the status bar, active-format highlighting (B/I/U light up)
+- **Find in document** (⌘F) with next/prev + wrap-around
+- **Export**: `.md` / `.txt` / **PDF** (toolbar, or per file via right-click)
+
+### 📁 Documents
+- **Folder tree** (left panel) with subfolders, single-click expand, filename **search filter** + **Enter for full-content search** (results open in a temporary, never-saved tab)
+- **New / New Folder** buttons; files land in the selected folder
+- **Right-click any file** → full menu: Open · Read aloud · Stop · Optimize with Claude · Export · Reminder · Reveal in Finder · Delete (with confirm)
+- **Choose your format**: `.md` (default), `.html`, or `.txt` — in Settings, or by typing the extension in the file name (`report.txt`)
+- **Reminders** ⏰: per-document date/time picker → popup when due, with "Open document"
+
+### 🤖 Claude (Anthropic)
+- **✨ Optimize** (toolbar): optimizes the **selection** or the **whole document**, replaces it in place
+- **Preset styles**: Bullet points / Summary / Formal email / Action items (dropdown)
+- **Speech optimize**: the dictated text in the right panel optimizes into the result view below it
+- API key + model configurable in Settings (lazy import — app works without `anthropic` installed)
+
+### 🛠 App
+- **VS Code-style themes**: Dark+ and Light+ (flat panels, tab strip, **blue status bar** with status · word count · Whisper model · git branch)
+- **Font Awesome icons** via `qtawesome` (optional — graceful text fallback)
+- **⬆ Push**: commit & push everything to your configured git remote/branch (Settings)
+- **TTS**: read selection/document aloud (macOS `say`), per-tab 🔊 button, context-menu per file
+- **Keyboard shortcuts**: ⌘B/I/U · ⌘S save · ⌘N new · ⌘W close tab · ⌘F find · Ctrl+Shift+S split
 
 ---
 
-## 🖥️ UI Overview
+## 🖥️ Layout
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│ [ Ready ]        🎙️ Speech to Text                       [⚙] │
-│ 🕘 History     🗣️ Speaking...  ⏱ 00:12  (while recording)    │
-│ ┌───────────┐  ┌─────────────────────┬─────────────────────┐ │
-│ │ Oct 27    │  │ 📝 Original         │ ✨ Optimized        │ │
-│ │ 14:32:05  │  │   Transcript        │   (OpenAI)          │ │
-│ │ Oct 27    │  │  (live, streaming)  │  (on Mic OFF)       │ │
-│ │ 12:10:44  │  │                     │                     │ │
-│ └───────────┘  └─────────────────────┴─────────────────────┘ │
-│                [ 🎙️ Mic ON ]  [ 🛑 Mic OFF ]                 │
-│        [📋 Copy Original] [📋 Copy Optimized] [🧹] [❌]       │
-└──────────────────────────────────────────────────────────────┘
+[New Save 🔍 │ ✨Optimize▾ ⫿Split │ ⬆Push        ⚙]   row 1
+[↶↷ B I U S │ H1 H2 H3 12 🎨🖍 │ • 1. ☐ │ ⇤☰⇥≣ │ </> ▦ 🧹 Delete ⇩ ⏰]  row 2
+┌────────────┬────────────────────────────┬────────────┐
+│📁 DOCUMENTS│  [New][tab 🔊t ✕][tab ✕][New]│ 🎙️ SPEECH │
+│ 🔍 search  │ ─────────────────────────── │ [ Start ]  │
+│ ▸ folder   │                             │ 🗣️ ⏱ 00:12 │
+│   file.md  │         EDITOR              │ ┌STT──────┐│
+│   note.txt │    (or two panes, split)    │ └─────────┘│
+│🕘 SPEECH   │                             │ [🔊][⏹]    │
+│  HISTORY   │                             │ ✨ OPTIMIZE │
+│            │                             │ [Optimize] │
+│            │                             │ ┌result───┐│
+└────────────┴────────────────────────────┴────────────┘
+[ status │ 123 words · 1042 chars │ 🧠 base │ ⎇ main ]  status bar
 ```
 
 ---
 
-## 🚀 Installation
+## 🚀 Install & run
 
 ```bash
-pip install -r requirements.txt
+make install      # pip install -r requirements.txt + pytest tools
+make icons        # optional: qtawesome (Font Awesome icons)
+make run          # python3 main.py
 ```
 
-or directly:
+or manually:
 
 ```bash
-pip3 install PyQt5 faster-whisper sounddevice numpy openai noisereduce
-```
-
-**macOS:** grant Microphone permission to your terminal/IDE under *System Settings → Privacy & Security → Microphone*.
-
-**Linux (Ubuntu/Debian):** if `sounddevice`/PyQt5 fail:
-
-```bash
-sudo apt-get update && sudo apt-get install -y python3-pyqt5 portaudio19-dev
-```
-
-## ▶️ Run
-
-```bash
+pip3 install PyQt5 faster-whisper sounddevice numpy anthropic noisereduce qtawesome
 python3 main.py
 ```
 
-## ✅ Smoke test
+**macOS:** grant Microphone permission to your terminal/IDE (*System Settings → Privacy & Security → Microphone*). TTS uses the built-in `say` command.
 
-Verifies dependencies (incl. architecture issues like broken wheels), then runs a generated 3s WAV through denoise → transcribe:
+## ✅ Tests
 
 ```bash
-python3 test_pipeline.py
-# exit code 0 = healthy, 1 = something broken (details printed)
+make test     # 31 happy-flow UI tests (headless, pytest-qt)
+make smoke    # dependency + audio pipeline smoke test
 ```
 
----
+CI runs both on every push (`.github/workflows/tests.yml`, macOS runner).
 
-## ⚙️ Settings (⚙ button, top-right)
-
-Everything persists to `settings.json`:
+## ⚙️ Settings (⚙ top right)
 
 | Setting | Default | Notes |
 |---|---|---|
-| OpenAI API key | — | Password-masked; enables the Optimized panel |
-| System prompt | bullet-points rewriter | Fully editable, "Reset to default" button |
-| Whisper model | `base` | `tiny`→`medium`; larger = better + slower (+one-time download) |
-| Live transcription | on | Off = transcribe once at Mic OFF |
-| Noise reduction | on | High-pass + spectral gating |
-| Theme | light | Light ☀️ / Dark 🌙 |
-| Save history | on | Writes `history/transcription_<ts>.md` |
+| Claude API key + model | `claude-sonnet-5-5` | console.anthropic.com |
+| Documents folder | `documents/` | 📁 browse |
+| Document format | `.md` | `.md` / `.html` / `.txt` |
+| Git remote + branch | `main` | token in HTTPS URL or SSH |
+| Whisper model | `base` | tiny→medium |
+| Live dictation / noise reduction | on | |
+| Theme | light | VS Dark+ / Light+ |
 
-> ⚠️ `settings.json` contains your API key and `history/` contains transcripts — both are in `.gitignore`. Don't commit them.
+> ⚠️ `settings.json` (API key), `history/`, `reminders.json` are git-ignored.
 
----
-
-## 🧩 Architecture
+## 🧩 Code layout
 
 ```
-mic ──► audio_callback ──► 4s chunks (+0.7s overlap) ──► stream_queue
-                                                              │
-                              persistent transcriber thread ◄─┘
-                          (high-pass → noisereduce → VAD → Whisper)
-                                                              │
-                              live text ──► Original panel ◄──┘
-Mic OFF ──► tail chunk + FLUSH ──► session drained
-                                                              │
-                          OpenAI optimize (once, full text) ──┘
-                                                              │
-                                    history/*.md + sidebar ◄──┘
+main.py               app window, dictation pipeline, tabs/docs logic, Claude, git, reminders
+ui/pane.py            EditorPane (tabs + find bar + editor)
+ui/toolbar.py         top bar + tools row
+ui/sidebar.py         documents tree + speech history + speech panel
+models.py             Whisper, denoise, Claude optimize (all lazy-imported)
+documents_manager.py  local doc storage (.md/.html/.txt, folders)
+history_manager.py    speech session archive
+reminders_manager.py  per-document reminders
+tts_manager.py        macOS `say` wrapper
+git_manager.py        init/add/commit/push
+settings_manager.py   settings.json persistence
+test_app.py           31 UI tests · test_pipeline.py env smoke test · Makefile · CI
 ```
-
-| File | Role |
-|---|---|
-| `main.py` | PyQt5 UI, streaming pipeline, workers, settings dialog, level indicator |
-| `models.py` | `SpeechModels` — Whisper lifecycle, denoise, OpenAI optimize (all lazy-imported) |
-| `config.py` | Constants, chunk/overlap timings, theme stylesheets |
-| `settings_manager.py` | `settings.json` load/save with defaults |
-| `history_manager.py` | Save/list/load `history/*.md` sessions |
-| `test_pipeline.py` | Environment + pipeline smoke test |
-
----
 
 ## 🛠️ Troubleshooting
 
-**`mach-o file, but is an incompatible architecture (have 'x86_64', need 'arm64')`** — stale Intel wheels in `~/Library/Python/3.9`. Fix:
-
-```bash
-python3 -m pip install --force-reinstall --no-cache-dir <package>
-python3 test_pipeline.py   # verify
-```
-
-**Live text lags behind speech** — you're transcribing slower than real-time. Drop to a smaller Whisper model or disable noise reduction.
-
-**First transcription pauses** — one-time downloads: Whisper model (~40 MB–1.5 GB depending on size) and the Silero VAD model (~2 MB).
+- **`have 'x86_64', need 'arm64'`** — stale Intel wheels: `python3 -m pip install --force-reinstall --no-cache-dir <pkg>`, then `make smoke`
+- **Dictation lags** — smaller Whisper model or disable noise reduction
+- **Icons missing** — `make icons` (installs qtawesome); without it, text labels are used everywhere

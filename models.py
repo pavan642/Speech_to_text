@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import config
 
-logger = logging.getLogger("SpeechGrammarApp")
+logger = logging.getLogger("SpeechEditor")
 
 
 class SpeechModels:
@@ -11,8 +11,8 @@ class SpeechModels:
     def __init__(self):
         self.whisper_model = None
         self.whisper_model_name = config.WHISPER_MODEL_NAME
-        self._openai_client = None
-        self._openai_key = None
+        self._claude_client = None
+        self._claude_key = None
 
     def set_whisper_model(self, model_name: str):
         """Requests a different Whisper model size; forces a reload on next use."""
@@ -79,32 +79,31 @@ class SpeechModels:
         )
         return reduced.astype(np.float32)
 
-    def optimize_text(self, text: str, api_key: str, system_prompt: str = "") -> str:
-        """Optimizes the transcribed text using the OpenAI API.
+    def optimize_with_claude(self, text: str, api_key: str, model: str = "",
+                             system_prompt: str = "") -> str:
+        """Optimizes text (grammar, clarity, bullet points) via the Claude API.
 
-        The openai package is imported lazily here so the app can always
-        transcribe speech even when openai (or its dependencies) is not
-        installed or fails to load.
+        The anthropic package is imported lazily so the app runs fine
+        without it when Claude integration is unused.
         """
         if not text or not api_key:
             return ""
 
-        from openai import OpenAI  # lazy import — only needed for optimization
+        from anthropic import Anthropic  # lazy import
 
         # Recreate the client only when the key changes
-        if self._openai_client is None or self._openai_key != api_key:
-            self._openai_client = OpenAI(api_key=api_key)
-            self._openai_key = api_key
+        if self._claude_client is None or self._claude_key != api_key:
+            self._claude_client = Anthropic(api_key=api_key)
+            self._claude_key = api_key
 
-        prompt = system_prompt.strip() or config.OPENAI_SYSTEM_PROMPT
-
-        logger.info(f"Optimizing text with OpenAI ({config.OPENAI_MODEL})...")
-        response = self._openai_client.chat.completions.create(
-            model=config.OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": text},
-            ],
-            temperature=0.3,
+        logger.info(f"Optimizing text with Claude ({model or config.CLAUDE_MODEL})...")
+        response = self._claude_client.messages.create(
+            model=model or config.CLAUDE_MODEL,
+            max_tokens=config.CLAUDE_MAX_TOKENS,
+            system=system_prompt or config.CLAUDE_OPTIMIZE_PROMPT,
+            messages=[{"role": "user", "content": text}],
         )
-        return response.choices[0].message.content.strip()
+        return "".join(
+            block.text for block in response.content
+            if getattr(block, "type", "") == "text"
+        ).strip()

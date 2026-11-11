@@ -1,0 +1,7 @@
+make run      # launch the app
+make test     # headless UI test suite
+make smoke    # dependency + pipeline smoke test
+make install  # all deps incl. pytest/pytest-qt
+make icons    # qtawesome (Font Awesome)
+make clean    # __pycache__ / pytest cache
+

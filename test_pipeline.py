@@ -48,7 +48,7 @@ def main():
     check("sounddevice", lambda: __import__("sounddevice").__version__)
     check("scipy", lambda: __import__("scipy").__version__)
     check("noisereduce", lambda: __import__("noisereduce").__version__)
-    check("openai (+ jiter)", lambda: __import__("openai").__version__, required=False)
+    check("anthropic (Claude)", lambda: __import__("anthropic").__version__, required=False)
     check("PyQt5", lambda: __import__("PyQt5.QtCore").QT_VERSION_STR)
 
     # ---- 2. Generate a 3s synthetic speech-like WAV ----

@@ -1,9 +1,11 @@
 {
   "theme": "dark",
-  "openai_api_key": "",
+  "claude_api_key": "",
+  "claude_model": "claude-sonnet-5-5",
   "whisper_model": "base",
-  "openai_prompt": "You are a text optimization assistant. Rewrite the user's speech transcription: correct all grammatical errors, improve clarity and flow, and format the result as clear bullet points while strictly preserving the original meaning. Return only the bullet-point text, with no commentary or preamble.",
-  "save_history": true,
+  "live_transcription": true,
   "noise_reduction": true,
-  "live_transcription": true
+  "documents_folder": "documents",
+  "git_remote_url": "",
+  "git_branch": "main"
 }
