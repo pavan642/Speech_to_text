@@ -42,7 +42,7 @@ def create_document(folder: str, name: str, ext: str = ".md") -> str:
     if given_ext.lower() in SUPPORTED_EXTS:
         name, ext = given_base, given_ext.lower()
     if ext not in SUPPORTED_EXTS:
-        ext = SUPPORTED_EXTS[0]
+        ext = ".txt"  # default format
     base = _slug(name)
     path = os.path.join(folder, base + ext)
     n = 2
@@ -52,6 +52,22 @@ def create_document(folder: str, name: str, ext: str = ".md") -> str:
     save_document(path, "")
     logger.info(f"Created document: {path}")
     return path
+
+
+def import_document(source_path: str, dest_folder: str) -> str:
+    """Copies an external file into the documents folder (unique name)."""
+    ensure_folder(dest_folder)
+    base = os.path.basename(source_path)
+    dest = os.path.join(dest_folder, base)
+    stem, ext = os.path.splitext(base)
+    n = 2
+    while os.path.exists(dest):
+        dest = os.path.join(dest_folder, f"{stem}_{n}{ext}")
+        n += 1
+    with open(source_path, "rb") as src, open(dest, "wb") as dst:
+        dst.write(src.read())
+    logger.info(f"Imported {source_path} -> {dest}")
+    return dest
 
 
 def create_folder(parent: str, name: str) -> str:
@@ -82,6 +98,39 @@ def delete_document(path: str):
     if os.path.exists(path):
         os.remove(path)
         logger.info(f"Deleted document: {path}")
+
+
+def rename_document(old_path: str, new_name: str) -> str:
+    """Renames a file (keeps extension) or folder. Returns the new path."""
+    directory = os.path.dirname(old_path)
+    _, ext = os.path.splitext(old_path)
+    base = _slug(new_name)
+    new_path = os.path.join(directory, base + ext)
+    if os.path.abspath(new_path) == os.path.abspath(old_path):
+        return old_path
+    n = 2
+    while os.path.exists(new_path):
+        new_path = os.path.join(directory, f"{base}_{n}{ext}")
+        n += 1
+    os.rename(old_path, new_path)
+    logger.info(f"Renamed {old_path} -> {new_path}")
+    return new_path
+
+
+def duplicate_document(path: str) -> str:
+    """Creates a 'name_copy.ext' copy next to the original. Returns the copy path."""
+    directory = os.path.dirname(path)
+    stem, ext = os.path.splitext(os.path.basename(path))
+    new_path = os.path.join(directory, f"{stem}_copy{ext}")
+    n = 2
+    while os.path.exists(new_path):
+        new_path = os.path.join(directory, f"{stem}_copy{n}{ext}")
+        n += 1
+    with open(path, "r", encoding="utf-8") as src, \
+            open(new_path, "w", encoding="utf-8") as dst:
+        dst.write(src.read())
+    logger.info(f"Duplicated {path} -> {new_path}")
+    return new_path
 
 
 def display_name(path: str) -> str:

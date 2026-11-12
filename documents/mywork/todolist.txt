@@ -1,0 +1,5 @@
+to do list
+write Agents
+read ML
+Study LLM 
+What is self attention

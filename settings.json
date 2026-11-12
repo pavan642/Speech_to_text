@@ -1,11 +1,14 @@
 {
-  "theme": "dark",
-  "claude_api_key": "",
+  "theme": "light",
+  "claude_api_key": "sk-3KSudXHkRwGxiRs78-TrOA",
   "claude_model": "claude-sonnet-5-5",
+  "llm_api_base": "",
   "whisper_model": "base",
   "live_transcription": true,
   "noise_reduction": true,
+  "language": "en",
   "documents_folder": "documents",
+  "doc_extension": ".txt",
   "git_remote_url": "",
   "git_branch": "main"
 }

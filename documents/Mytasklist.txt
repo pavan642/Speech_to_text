@@ -1,0 +1,12 @@
+not my testing 1 2 3 is it working is it Support folder strcuture and add new folder creation option in the document section
+Allow user to add file inside the folder 
+on cliking folder expand to show list of the files inside the folder 
+keep speak icon/speek stop/delete next to file in the document section
+keep close icon on the center editor per each file to close only on center editor
+
+
+not my testing 1 2 3 is it working is it
+
+☐ compelte this task
+☐ today task
+☐ task2

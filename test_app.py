@@ -276,3 +276,143 @@ class TestSplitView:
         w.toggle_split_view()
         assert w.pane2 is None
         assert w.active_pane is w.pane1
+
+
+# ============================================================
+# Newer features (backfill)
+# ============================================================
+
+class TestRenameDuplicate:
+    def test_rename_document_keeps_extension(self, tmp_path):
+        path = docs.create_document(str(tmp_path), "old_name", ext=".md")
+        new_path = docs.rename_document(path, "new_name")
+        assert new_path.endswith(".md")
+        assert os.path.exists(new_path) and not os.path.exists(path)
+
+    def test_duplicate_document_copies_content(self, tmp_path):
+        path = docs.create_document(str(tmp_path), "orig", ext=".txt")
+        docs.save_document(path, "copy me")
+        dup = docs.duplicate_document(path)
+        assert "_copy" in os.path.basename(dup)
+        assert docs.read_document(dup) == "copy me"
+
+
+class TestFuzzyAndDialogs:
+    def test_fuzzy_subsequence(self, app_window):
+        from main import QuickOpenDialog
+        assert QuickOpenDialog._fuzzy("ntq", "notes_q3.md")
+        assert not QuickOpenDialog._fuzzy("xyz", "notes.md")
+
+    def test_command_palette_lists_commands(self, app_window):
+        from main import CommandPaletteDialog
+        dlg = CommandPaletteDialog(app_window, [("Save Document", lambda: None)])
+        assert dlg.list.count() == 1
+        dlg.input.setText("sve")  # fuzzy match
+        assert dlg.list.count() == 1
+
+    def test_settings_dialog_is_tabbed(self, app_window):
+        from PyQt5.QtWidgets import QTabWidget
+        from main import SettingsDialog
+        dlg = SettingsDialog(app_window.settings, app_window)
+        tabs = dlg.findChild(QTabWidget)
+        assert tabs is not None and tabs.count() == 4
+
+
+class TestZoomAndPanels:
+    def test_zoom_changes_font_and_clamps(self, app_window):
+        w = app_window
+        base = w.pane1.editor.font().pointSize()
+        w.zoom_editor(1)
+        assert w.pane1.editor.font().pointSize() == base + 1
+        w.zoom_reset()
+        assert w.pane1.editor.font().pointSize() == base
+        for _ in range(30):
+            w.zoom_editor(-1)
+        assert w.zoom_level >= -4  # clamped
+
+    def test_collapsible_panels(self, app_window):
+        w = app_window
+        assert w.left_panel.isVisible()
+        w.toggle_left_panel()
+        assert not w.left_panel.isVisible()
+        w.toggle_left_panel()
+        assert w.left_panel.isVisible()
+        w.toggle_right_panel()
+        assert not w.right_panel.isVisible()
+
+
+class TestRecentUIFeatures:
+    def test_breadcrumb_shows_path(self, app_window):
+        w = app_window
+        path = docs.create_document(w.settings["documents_folder"], "crumb", ext=".txt")
+        w.open_document_path(path)
+        assert "crumb" in w.pane1.breadcrumb.text()
+
+    def test_empty_state_toggles(self, app_window):
+        w = app_window
+        assert w.pane1.stack.currentIndex() == 0  # welcome page
+        path = docs.create_document(w.settings["documents_folder"], "x", ext=".txt")
+        w.open_document_path(path)
+        assert w.pane1.stack.currentIndex() == 1  # editor
+        w.close_tab(w.pane1, 0)
+        assert w.pane1.stack.currentIndex() == 0
+
+    def test_toast_shows_message(self, app_window):
+        w = app_window
+        w.show_toast("Hello toast")
+        assert w.toast_label.isVisible()
+        assert w.toast_label.text() == "Hello toast"
+
+    def test_waveform_levels(self, app_window):
+        wf = app_window.waveform
+        wf.add_level(50)
+        wf.add_level(80)
+        assert len(wf._levels) == 2
+        wf.clear()
+        assert wf._levels == []
+
+
+class TestMarkdownSaveFix:
+    def test_md_save_never_contains_html(self, app_window):
+        w = app_window
+        path = docs.create_document(w.settings["documents_folder"], "mdcheck", ext=".md")
+        w.open_document_path(path)
+        w.editor.setPlainText("plain markdown text")
+        w.save_document()
+        content = docs.read_document(path)
+        assert "<html" not in content.lower()
+        assert "plain markdown text" in content
+
+
+class TestReplace:
+    def test_replace_all(self, app_window):
+        w = app_window
+        w.editor.setPlainText("foo bar foo baz foo")
+        w.pane1.find_input.setText("foo")
+        w.pane1.replace_input.setText("qux")
+        w.pane1.replace_all()
+        assert w.editor.toPlainText() == "qux bar qux baz qux"
+
+
+class TestKeychainFallback:
+    def test_settings_roundtrip_without_keyring(self, tmp_path, monkeypatch):
+        import settings_manager
+        monkeypatch.setattr(settings_manager.config, "SETTINGS_FILE",
+                            str(tmp_path / "s.json"))
+        monkeypatch.setattr(settings_manager, "_keyring", lambda: None)
+        settings = settings_manager.load_settings()
+        settings["claude_api_key"] = "sk-test"
+        settings_manager.save_settings(settings)
+        loaded = settings_manager.load_settings()
+        assert loaded["claude_api_key"] == "sk-test"
+
+
+class TestSessionPersist:
+    def test_save_session_records_tabs(self, app_window):
+        w = app_window
+        path = docs.create_document(w.settings["documents_folder"], "sess", ext=".txt")
+        w.open_document_path(path)
+        w._save_session()
+        session = w.settings["session"]
+        assert path in session["panes"][0]["tabs"]
+        assert "splitter" in session

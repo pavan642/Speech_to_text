@@ -1,7 +1,12 @@
 # models.py
 import logging
+import time
+
 import numpy as np
 import config
+
+# LLM request timeout (seconds)
+LLM_TIMEOUT = 60
 
 logger = logging.getLogger("SpeechEditor")
 
@@ -37,14 +42,15 @@ class SpeechModels:
             )
             logger.info("Whisper model loaded successfully.")
 
-    def transcribe_audio(self, audio_data) -> str:
-        """Transcribes raw audio float array using Whisper."""
+    def transcribe_audio(self, audio_data, language: str = "en") -> str:
+        """Transcribes raw audio float array using Whisper.
+        language=None lets Whisper auto-detect."""
         self.load_whisper()
         logger.info("Transcribing audio with Whisper...")
         segments, _ = self.whisper_model.transcribe(
             audio_data,
             beam_size=1,
-            language="en",
+            language=language or None,
             condition_on_previous_text=False,
             vad_filter=True,  # skip silence/noise via built-in Silero VAD
         )
@@ -79,31 +85,110 @@ class SpeechModels:
         )
         return reduced.astype(np.float32)
 
-    def optimize_with_claude(self, text: str, api_key: str, model: str = "",
-                             system_prompt: str = "") -> str:
-        """Optimizes text (grammar, clarity, bullet points) via the Claude API.
+    # ---------- LLM optimization via LiteLLM (100+ providers) ----------
 
-        The anthropic package is imported lazily so the app runs fine
-        without it when Claude integration is unused.
-        """
-        if not text or not api_key:
+    @staticmethod
+    def resolve_model(api_key: str, api_base: str = "") -> str:
+        """Auto-picks a default model from the API key format:
+        sk-ant-…→Claude, sk-…→GPT-4o-mini, AIza…→Gemini, gsk_…→Groq,
+        no key/base URL→local Ollama."""
+        key = (api_key or "").strip()
+        if key.startswith("sk-ant-"):
+            return "claude-sonnet-5-5"
+        if key.startswith("AIza"):
+            return "gemini/gemini-2.0-flash"
+        if key.startswith("gsk_"):
+            return "groq/llama-3.3-70b-versatile"
+        if key.startswith("sk-"):
+            return "gpt-4o-mini"
+        if api_base or not key:
+            return "ollama/llama3.2"  # local free default
+        return config.LLM_MODEL
+
+    def optimize_with_llm(self, text: str, api_key: str, model: str = "",
+                          system_prompt: str = "", api_base: str = "") -> str:
+        """Optimizes text via any LiteLLM-supported provider (OpenAI, Anthropic,
+        Gemini, Groq, Ollama…). litellm is imported lazily. 60s timeout."""
+        if not text:
             return ""
 
-        from anthropic import Anthropic  # lazy import
+        import litellm  # lazy import
 
-        # Recreate the client only when the key changes
-        if self._claude_client is None or self._claude_key != api_key:
-            self._claude_client = Anthropic(api_key=api_key)
-            self._claude_key = api_key
-
-        logger.info(f"Optimizing text with Claude ({model or config.CLAUDE_MODEL})...")
-        response = self._claude_client.messages.create(
-            model=model or config.CLAUDE_MODEL,
-            max_tokens=config.CLAUDE_MAX_TOKENS,
-            system=system_prompt or config.CLAUDE_OPTIMIZE_PROMPT,
-            messages=[{"role": "user", "content": text}],
+        model_name = model or self.resolve_model(api_key, api_base)
+        logger.info(
+            f"[LLM] → request: model={model_name} "
+            f"base={api_base or 'default'} text_len={len(text)} timeout={LLM_TIMEOUT}s"
         )
-        return "".join(
-            block.text for block in response.content
-            if getattr(block, "type", "") == "text"
-        ).strip()
+        t0 = time.time()
+        try:
+            response = litellm.completion(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": system_prompt or config.CLAUDE_OPTIMIZE_PROMPT},
+                    {"role": "user", "content": text},
+                ],
+                api_key=api_key or None,
+                api_base=api_base or None,
+                max_tokens=config.CLAUDE_MAX_TOKENS,
+                timeout=LLM_TIMEOUT,
+            )
+            elapsed = time.time() - t0
+            usage = getattr(response, "usage", None)
+            logger.info(f"[LLM] ← response: {elapsed:.1f}s, usage={usage}")
+            return (response.choices[0].message.content or "").strip()
+        except Exception as e:
+            logger.error(f"[LLM] ✗ failed after {time.time() - t0:.1f}s: {e}")
+            raise
+
+    def optimize_with_llm_stream(self, text: str, api_key: str, model: str,
+                                 system_prompt: str, api_base: str, on_delta):
+        """Streams the optimization token-by-token via LiteLLM. 60s timeout."""
+        if not text:
+            return
+
+        import litellm  # lazy import
+
+        model_name = model or self.resolve_model(api_key, api_base)
+        logger.info(
+            f"[LLM] → stream request: model={model_name} "
+            f"base={api_base or 'default'} text_len={len(text)} timeout={LLM_TIMEOUT}s"
+        )
+        t0 = time.time()
+        chunks = 0
+        try:
+            stream = litellm.completion(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": system_prompt or config.CLAUDE_OPTIMIZE_PROMPT},
+                    {"role": "user", "content": text},
+                ],
+                api_key=api_key or None,
+                api_base=api_base or None,
+                max_tokens=config.CLAUDE_MAX_TOKENS,
+                stream=True,
+                timeout=LLM_TIMEOUT,
+            )
+            for chunk in stream:
+                try:
+                    piece = chunk.choices[0].delta.content
+                except (AttributeError, IndexError, TypeError):
+                    piece = None
+                if piece:
+                    on_delta(piece)
+                    chunks += 1
+            logger.info(f"[LLM] ← stream done: {time.time() - t0:.1f}s, {chunks} chunks")
+        except Exception as e:
+            logger.error(f"[LLM] ✗ stream failed after {time.time() - t0:.1f}s: {e}")
+            raise
+
+    # ---------- Backwards-compatible aliases (older call sites) ----------
+
+    def optimize_with_claude(self, text: str, api_key: str, model: str = "",
+                             system_prompt: str = "", api_base: str = "") -> str:
+        return self.optimize_with_llm(text, api_key, model, system_prompt, api_base)
+
+    def optimize_with_claude_stream(self, text: str, api_key: str, model: str,
+                                    system_prompt: str, on_delta, api_base: str = ""):
+        return self.optimize_with_llm_stream(
+            text, api_key, model, system_prompt, api_base, on_delta
+        )

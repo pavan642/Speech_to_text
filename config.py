@@ -11,9 +11,19 @@ WHISPER_MODEL_OPTIONS = ["tiny", "base", "small", "medium"]
 WHISPER_DEVICE = "cpu"
 WHISPER_COMPUTE_TYPE = "int8"
 
-# Claude (Anthropic) Settings
-CLAUDE_MODEL = "claude-sonnet-5-5"
-CLAUDE_MODEL_OPTIONS = ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"]
+# LLM Settings (LiteLLM — 100+ providers)
+LLM_MODEL = "claude-sonnet-5-5"  # default
+LLM_MODEL_OPTIONS = [
+    "claude-sonnet-5-5",          # Anthropic
+    "gpt-4o-mini",                # OpenAI
+    "gpt-4o",                     # OpenAI
+    "gemini/gemini-2.0-flash",    # Google
+    "groq/llama-3.3-70b-versatile",  # Groq
+    "mistral/mistral-large-latest",  # Mistral
+    "ollama/llama3.2",            # local, free, offline
+]
+CLAUDE_MODEL = LLM_MODEL  # backwards compat
+CLAUDE_MODEL_OPTIONS = LLM_MODEL_OPTIONS
 CLAUDE_MAX_TOKENS = 1024
 CLAUDE_OPTIMIZE_PROMPT = (
     "You are a text optimization assistant. Rewrite the user's text: correct "
@@ -58,6 +68,7 @@ LIGHT_THEME = """
 QWidget { background-color: #FFFFFF; color: #1F1F1F; font-family: "Helvetica Neue"; }
 QLabel { background: transparent; }
 QLabel#subtitle { color: #616161; }
+QLabel#breadcrumb { color: #6F6F6F; }
 QLabel#sectionTitle { color: #6F6F6F; font-size: 10px; font-weight: bold; padding: 2px 0; }
 
 /* Panels, tab strip, status bar */
@@ -89,7 +100,7 @@ QPushButton:disabled { color: #8A8A8A; }
 QPushButton#primaryBtn { background-color: #0E639C; color: white; border: none; padding: 6px 12px; }
 QPushButton#primaryBtn:hover { background-color: #1177BB; }
 QPushButton#primaryBtn:pressed { background-color: #0B4F7C; }
-QPushButton#settingsBtn { border: none; font-size: 14px; border-radius: 4px; }
+QPushButton#settingsBtn { border-radius: 6px; padding: 0 12px; font-weight: bold; font-size: 11px; }
 
 /* Settings dialog groups */
 QGroupBox { background-color: #F3F3F3; border: 1px solid #E0E0E0; border-radius: 3px; margin-top: 14px; font-weight: bold; }
@@ -116,6 +127,7 @@ QScrollBar::handle:horizontal:hover { background: #A6A6A6; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
 
 QToolTip { background-color: #F3F3F3; color: #1F1F1F; border: 1px solid #CECECE; padding: 4px 8px; }
+QLabel#toast { background-color: #1F1F1F; color: #FFFFFF; border-radius: 8px; padding: 8px 16px; font-weight: bold; }
 """
 
 DARK_THEME = """
@@ -123,6 +135,7 @@ DARK_THEME = """
 QWidget { background-color: #1E1E1E; color: #CCCCCC; font-family: "Helvetica Neue"; }
 QLabel { background: transparent; }
 QLabel#subtitle { color: #9D9D9D; }
+QLabel#breadcrumb { color: #9D9D9D; }
 QLabel#sectionTitle { color: #BBBBBB; font-size: 10px; font-weight: bold; padding: 2px 0; }
 
 /* Panels, tab strip, status bar */
@@ -154,7 +167,7 @@ QPushButton:disabled { color: #6E6E6E; }
 QPushButton#primaryBtn { background-color: #0E639C; color: white; border: none; padding: 6px 12px; }
 QPushButton#primaryBtn:hover { background-color: #1177BB; }
 QPushButton#primaryBtn:pressed { background-color: #0B4F7C; }
-QPushButton#settingsBtn { border: none; font-size: 14px; border-radius: 4px; }
+QPushButton#settingsBtn { border-radius: 6px; padding: 0 12px; font-weight: bold; font-size: 11px; }
 
 /* Settings dialog groups */
 QGroupBox { background-color: #252526; border: 1px solid #3E3E42; border-radius: 3px; margin-top: 14px; font-weight: bold; }
@@ -181,4 +194,5 @@ QScrollBar::handle:horizontal:hover { background: #4F4F4F; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
 
 QToolTip { background-color: #252526; color: #CCCCCC; border: 1px solid #454545; padding: 4px 8px; }
+QLabel#toast { background-color: #F0F0F0; color: #1F1F1F; border-radius: 8px; padding: 8px 16px; font-weight: bold; }
 """

@@ -44,6 +44,13 @@ def list_sessions() -> list:
     return sorted(files, reverse=True)  # timestamped names sort chronologically
 
 
+def delete_session(path: str):
+    """Deletes a history session file."""
+    if os.path.exists(path):
+        os.remove(path)
+        logger.info(f"Deleted history session: {path}")
+
+
 def load_session(path: str):
     """Parses a history file back into (raw_text, optimized_text)."""
     with open(path, "r", encoding="utf-8") as f:
